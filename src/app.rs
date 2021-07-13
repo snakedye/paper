@@ -113,7 +113,6 @@ impl Snape {
                     // that it has been configured
                     // The client is also responsible for damage
                     self.draw(&paper, width, height);
-                    // self.mempool.fill();
                     self.surface.commit();
                 }
                 zwlr_layer_surface_v1::Event::Closed => {
@@ -128,9 +127,11 @@ impl Snape {
 pub fn tile(path: &Path, width: u32, height: u32) -> Surface {
     let mut y = 0;
     let image = Image::new(path);
-    let mut surface = Surface::empty(width, height);
     let img_width = image.as_ref().unwrap().get_width();
     let img_height = image.as_ref().unwrap().get_height();
+    let surface_width = img_width * (width as f64/img_width as f64).ceil() as u32;
+    let surface_height = img_height * (height as f64/img_height as f64).ceil() as u32;
+    let mut surface = Surface::empty(surface_width, surface_height);
     while y < height {
         let mut x = 0;
         while x < width {
