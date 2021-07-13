@@ -477,6 +477,7 @@ dependencies = [
 [[package]]
 name = "snui"
 version = "0.1.0"
+source = "git+https://gitlab.com/snakedye/snui.git#8bad2c7f79a33f18bf6fbd441d1e9b34abb12dc2"
 dependencies = [
  "image",
  "smithay-client-toolkit",

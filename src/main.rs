@@ -51,7 +51,7 @@ fn main() {
                     print!("  -i | --image 		 		/path/to/image\n");
                     print!("  -t | --tile 		 		/path/to/image\n");
                     print!("  -b | --border		 		/path/to/image border_size #AARRGGBB\n");
-                    print!("  -tb | --tiled-bordered 	/path/to/image border_size #AARRGGBB\n");
+                    print!("  -tb | --tiled-bordered 		/path/to/image border_size #AARRGGBB\n");
                     println!();
                 }
                 _ => break

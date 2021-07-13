@@ -137,25 +137,6 @@ impl Snape {
     }
 }
 
-pub fn tile_floor(path: &Path, width: u32, height: u32) -> Surface {
-    let mut y = 0;
-    let image = Image::new(path);
-    let img_width = image.as_ref().unwrap().get_width();
-    let img_height = image.as_ref().unwrap().get_height();
-    let surface_width = img_width * (width as f64/img_width as f64).floor() as u32;
-    let surface_height = img_height * (height as f64/img_height as f64).floor() as u32;
-    let mut surface = Surface::empty(surface_width, surface_height);
-    while y < height {
-        let mut x = 0;
-        while x < width {
-            image.as_ref().unwrap().draw(&mut surface, x, y);
-            x += img_width;
-        }
-        y += img_height;
-    }
-    surface
-}
-
 pub fn tile(path: &Path, width: u32, height: u32) -> Surface {
     let mut y = 0;
     let image = Image::new(path);
