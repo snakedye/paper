@@ -35,12 +35,23 @@ fn main() {
                     let color = u32::from_str_radix(&args.next().unwrap().trim_start_matches("#"), 16);
                     paper = app::Paper::Border(path, gap, color.unwrap());
                 }
+                "-tb" | "--tiled-bordered" => {
+                    let path = args.next().unwrap();
+                    let gap = if let Some(gap) = args.next() {
+                        if let Ok(gap) = gap.parse::<u32>() {
+                            gap
+                        } else { 0 }
+                    } else { 0 };
+                    let color = u32::from_str_radix(&args.next().unwrap().trim_start_matches("#"), 16);
+                    paper = app::Paper::TiledBorder(path, gap, color.unwrap());
+                }
                 "-h" | "--help" => {
                     print!("Usage: paper [option]\n\n");
-                    print!("  -c | --color 		 #AARRGGBB\n");
-                    print!("  -i | --image 		 /path/to/image\n");
-                    print!("  -t | --tile 		 /path/to/image\n");
-                    print!("  -b | --border		 /path/to/image border_size #AARRGGBB\n");
+                    print!("  -c | --color 		 		#AARRGGBB\n");
+                    print!("  -i | --image 		 		/path/to/image\n");
+                    print!("  -t | --tile 		 		/path/to/image\n");
+                    print!("  -b | --border		 		/path/to/image border_size #AARRGGBB\n");
+                    print!("  -tb | --tiled-bordered 	/path/to/image border_size #AARRGGBB\n");
                     println!();
                 }
                 _ => break

@@ -18,6 +18,7 @@ pub enum Paper {
     Color(u32),
     Tiled(String),
     Border(String, u32, u32),
+    TiledBorder(String, u32, u32),
     Image(String),
     None
 }
@@ -88,9 +89,21 @@ impl Snape {
                 let bg = image_with_border(path, width , height, *gap, *color);
                 buffer.composite(&to_surface(&bg), 0, 0);
             }
+            Paper::TiledBorder(path, gap, color) => {
+                let path = Path::new(&path);
+                let bg = tile(path, width as u32, height as u32);
+                buffer.composite(&bg, 0, 0);
+                let color = Content::Pixel(*color);
+                let border_hor = Surface::new(width, *gap, color).unwrap();
+                let border_ver = Surface::new(*gap, height, color).unwrap();
+                buffer.composite(&border_hor, 0, 0);
+                buffer.composite(&border_hor, 0, height-gap);
+                buffer.composite(&border_ver, 0, 0);
+                buffer.composite(&border_ver, width-gap, 0);
+            }
             Paper::Tiled(path) => {
                 let path = Path::new(&path);
-                let bg = tile(path, self.width as u32, self.height as u32);
+                let bg = tile(path, width as u32, height as u32);
                 buffer.composite(&bg, 0, 0);
             }
             Paper::None => {}
@@ -122,6 +135,25 @@ impl Snape {
             }
         });
     }
+}
+
+pub fn tile_floor(path: &Path, width: u32, height: u32) -> Surface {
+    let mut y = 0;
+    let image = Image::new(path);
+    let img_width = image.as_ref().unwrap().get_width();
+    let img_height = image.as_ref().unwrap().get_height();
+    let surface_width = img_width * (width as f64/img_width as f64).floor() as u32;
+    let surface_height = img_height * (height as f64/img_height as f64).floor() as u32;
+    let mut surface = Surface::empty(surface_width, surface_height);
+    while y < height {
+        let mut x = 0;
+        while x < width {
+            image.as_ref().unwrap().draw(&mut surface, x, y);
+            x += img_width;
+        }
+        y += img_height;
+    }
+    surface
 }
 
 pub fn tile(path: &Path, width: u32, height: u32) -> Surface {
