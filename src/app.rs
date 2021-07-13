@@ -81,7 +81,7 @@ impl Snape {
             Paper::Image(path) => {
                 let path = Path::new(&path);
                 let mut image = Image::new(path).unwrap();
-                image.resize(width, height);
+                image.resize(self.width as u32, self.height as u32);
                 buffer.composite(&to_surface(&image), 0, 0);
             }
             Paper::Border(path, gap, color) => {
@@ -126,6 +126,12 @@ impl Snape {
                     // that it has been configured
                     // The client is also responsible for damage
                     self.draw(&paper, width, height);
+                    self.surface.damage(
+                        0,
+                        0,
+                        width as i32,
+                        height as i32
+                    );
                     self.surface.commit();
                 }
                 zwlr_layer_surface_v1::Event::Closed => {

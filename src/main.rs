@@ -4,6 +4,7 @@ use environment::Environment;
 use wayland_client::{Attached, Display};
 use smithay_client_toolkit::shm::AutoMemPool;
 use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_shell_v1::Layer;
+use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_surface_v1::Anchor;
 
 fn main() {
     // Command line arguments
@@ -49,6 +50,7 @@ fn main() {
                     print!("Usage: paper [option]\n\n");
                     print!("  -c | --color 		 		#AARRGGBB\n");
                     print!("  -i | --image 		 		/path/to/image\n");
+                    print!("  -f | --fit 		 		/path/to/image\n");
                     print!("  -t | --tile 		 		/path/to/image\n");
                     print!("  -b | --border		 		/path/to/image border_size #AARRGGBB\n");
                     print!("  -tb | --tiled-bordered 		/path/to/image border_size #AARRGGBB\n");
@@ -76,6 +78,7 @@ fn main() {
                 .expect("Compositor doesn't implement the LayerShell protocol")
                 .get_layer_surface(&surface, Some(&output.wl_output), Layer::Background, String::from("paper"));
             surface.set_buffer_scale(output.scale);
+            layer_surface.set_anchor(Anchor::all());
             let snape = app::Snape::new(
                 output.width,
                 output.height,
