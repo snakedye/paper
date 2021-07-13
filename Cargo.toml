@@ -10,5 +10,5 @@ edition = "2018"
 wayland-commons = "0.28.5"
 wayland-client = "0.28.5"
 smithay-client-toolkit = "0.14.0"
-snui = { git="https://gitlab.com/snakedye/snui.git" }
+snui = { path="../snui" }
 wayland-protocols = { version="0.28.5", features=["unstable_protocols", "client"] }

@@ -61,7 +61,7 @@ impl Snape {
         self.surface.destroy();
         self.layer_surface.destroy();
     }
-    fn draw(&mut self, paper: &Paper) {
+    fn draw(&mut self, paper: &Paper, width: u32, height: u32) {
         let mut buffer = Buffer::new(
             self.width,
             self.height,
@@ -79,12 +79,13 @@ impl Snape {
             }
             Paper::Image(path) => {
                 let path = Path::new(&path);
-                let image = Image::new(path).unwrap();
+                let mut image = Image::new(path).unwrap();
+                image.resize(width, height);
                 buffer.composite(&to_surface(&image), 0, 0);
             }
             Paper::Border(path, gap, color) => {
                 let path = Path::new(&path);
-                let bg = image_with_border(path, self.width as u32, self.height as u32, *gap, *color);
+                let bg = image_with_border(path, width , height, *gap, *color);
                 buffer.composite(&to_surface(&bg), 0, 0);
             }
             Paper::Tiled(path) => {
@@ -111,7 +112,7 @@ impl Snape {
                     // The client should use commit to notify itself
                     // that it has been configured
                     // The client is also responsible for damage
-                    self.draw(&paper);
+                    self.draw(&paper, width, height);
                     // self.mempool.fill();
                     self.surface.commit();
                 }
@@ -143,6 +144,7 @@ pub fn tile(path: &Path, width: u32, height: u32) -> Surface {
 
 fn image_with_border(path: &Path, width: u32, height: u32, border_size: u32, color: u32) -> Node {
     let gap = border_size * 2;
-	let image = Image::new_with_size(path, width - gap, height - gap);
-    border(image.unwrap(), border_size, Content::Pixel(color))
+	let mut image = Image::new(path).unwrap();
+    image.resize(width - gap, height - gap);
+    border(image, border_size, Content::Pixel(color))
 }
