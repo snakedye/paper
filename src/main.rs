@@ -9,42 +9,36 @@ use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_surfac
 fn main() {
     // Command line arguments
     let mut args = std::env::args();
-    let mut paper = app::Paper::None;
+    let mut paper = app::Paper::default();
     args.next();
     loop {
         match args.next() {
             Some(flag) => match flag.as_str() {
                 "-c" | "--color" => {
-                    let color = u32::from_str_radix(&args.next().unwrap().trim_start_matches("#"), 16);
-                    paper = app::Paper::Color(color.unwrap());
+                    let res = u32::from_str_radix(&args.next().unwrap().trim_start_matches("#"), 16);
+                    if let Ok(color) = res {
+                        paper.style(app::Style::Color(color));
+                    }
                 }
                 "-i" | "--image" => {
-                    let path = args.next().unwrap();
-                    paper = app::Paper::Image(path);
+                    if let Some(path) = args.next() {
+                        paper.style(app::Style::Image(path));
+                    }
                 }
                 "-t" | "--tiled" => {
-                    let path = args.next().unwrap();
-                    paper = app::Paper::Tiled(path);
+                    if let Some(path) = args.next() {
+                        paper.style(app::Style::Tiled(path));
+                    }
                 }
                 "-b" | "--border" => {
-                    let path = args.next().unwrap();
-                    let gap = if let Some(gap) = args.next() {
+                    if let Some(gap) = args.next() {
                         if let Ok(gap) = gap.parse::<u32>() {
-                            gap
-                        } else { 0 }
-                    } else { 0 };
-                    let color = u32::from_str_radix(&args.next().unwrap().trim_start_matches("#"), 16);
-                    paper = app::Paper::Border(path, gap, color.unwrap());
-                }
-                "-tb" | "--tiled-bordered" => {
-                    let path = args.next().unwrap();
-                    let gap = if let Some(gap) = args.next() {
-                        if let Ok(gap) = gap.parse::<u32>() {
-                            gap
-                        } else { 0 }
-                    } else { 0 };
-                    let color = u32::from_str_radix(&args.next().unwrap().trim_start_matches("#"), 16);
-                    paper = app::Paper::TiledBorder(path, gap, color.unwrap());
+                            let res = u32::from_str_radix(&args.next().unwrap().trim_start_matches("#"), 16);
+                            if let Ok(color) = res {
+                                paper.border(gap, color);
+                            }
+                        }
+                    }
                 }
                 "-h" | "--help" => {
                     print!("Usage: paper [option]\n\n");
@@ -75,7 +69,7 @@ fn main() {
                 .layer_shell
                 .as_ref()
                 .expect("Compositor doesn't implement the LayerShell protocol")
-                .get_layer_surface(&surface, Some(&output.wl_output), Layer::Background, String::from("paper"));
+                .get_layer_surface(&surface, Some(&output.wl_output), Layer::Background, String::from("wallpaper"));
             surface.set_buffer_scale(output.scale);
             layer_surface.set_anchor(Anchor::all());
             let snape = app::Snape::new(

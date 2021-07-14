@@ -14,22 +14,38 @@ use wayland_protocols::wlr::unstable::layer_shell::v1::client::{
 };
 
 #[derive(Clone, Debug)]
-pub enum Paper {
-    Color(u32),
-    Tiled(String),
-    Border(String, u32, u32),
-    TiledBorder(String, u32, u32),
-    Image(String),
-    None
+pub struct Paper {
+    style: Style,
+    border: Option<(u32, u32)>,
 }
 
 impl Paper {
     pub fn is_some(&self) -> bool {
-        match self {
-            Paper::None => false,
+        match self.style {
+            Style::None => false,
             _ => true
         }
     }
+    pub fn default() -> Self {
+        Paper {
+            style: Style::None,
+            border: None
+        }
+    }
+    pub fn style(&mut self, style: Style) {
+        self.style = style
+    }
+    pub fn border(&mut self, gap: u32, color: u32) {
+        self.border = Some((gap, color));
+   }
+}
+
+#[derive(Clone, Debug)]
+pub enum Style {
+    Color(u32),
+    Tiled(String),
+    Image(String),
+    None,
 }
 
 pub struct Snape {
@@ -69,8 +85,8 @@ impl Snape {
             (4 * self.width) as i32,
             &mut self.mempool,
         );
-        match paper {
-            Paper::Color(color) => {
+        match &paper.style {
+            Style::Color(color) => {
                 let pxcount = buffer.size()/4;
                 self.layer_surface.set_exclusive_zone(-1);
                 let mut writer = BufWriter::new(buffer.get_mut_buf());
@@ -79,40 +95,43 @@ impl Snape {
                 }
                 writer.flush().unwrap();
             }
-            Paper::Image(path) => {
+            Style::Image(path) => {
                 let path = Path::new(&path);
                 self.layer_surface.set_exclusive_zone(-1);
                 let image = Image::new_with_size(path, self.width as u32, self.height as u32).unwrap();
                 buffer.composite(&to_surface(&image), 0, 0);
             }
-            Paper::Border(path, gap, color) => {
-                let path = Path::new(&path);
-                self.layer_surface.set_exclusive_zone(0);
-                let bg = image_with_border(path, width , height, *gap, *color);
-                buffer.composite(&to_surface(&bg), 0, 0);
-            }
-            Paper::TiledBorder(path, gap, color) => {
-                let path = Path::new(&path);
-                let bg = tile(path, width as u32, height as u32);
-                buffer.composite(&bg, 0, 0);
-                let color = Content::Pixel(*color);
-                self.layer_surface.set_exclusive_zone(0);
-                let border_hor = Surface::new(width, *gap, color).unwrap();
-                let border_ver = Surface::new(*gap, height, color).unwrap();
-                buffer.composite(&border_hor, 0, 0);
-                buffer.composite(&border_hor, 0, height-gap);
-                buffer.composite(&border_ver, 0, 0);
-                buffer.composite(&border_ver, width-gap, 0);
-            }
-            Paper::Tiled(path) => {
+            Style::Tiled(path) => {
                 let path = Path::new(&path);
                 self.layer_surface.set_exclusive_zone(-1);
-                let bg = tile(path, width as u32, height as u32);
+                let bg = tile(path, self.width as u32, self.height as u32);
                 buffer.composite(&bg, 0, 0);
             }
-            Paper::None => {}
+            _ => {}
+        }
+        if let Some((gap, color)) = paper.border {
+            self.layer_surface.set_exclusive_zone(0);
+            let color = Content::Pixel(color);
+            let border_hor = Surface::new(width, gap, color).unwrap();
+            let border_ver = Surface::new(gap, height, color).unwrap();
+            buffer.composite(&border_hor, 0, 0);
+            buffer.composite(&border_hor, 0, height-gap);
+            buffer.composite(&border_ver, 0, 0);
+            buffer.composite(&border_ver, width-gap, 0);
         }
         buffer.attach(&self.surface, 0, 0);
+        self.surface.damage(
+            0,
+            0,
+            1 << 30,
+            1 << 30
+        );
+        self.surface.damage_buffer(
+            0,
+            0,
+            1 << 30,
+            1 << 30
+        );
     }
     pub fn dispatch_surface(mut self, paper: Paper) {
         self.layer_surface.clone().quick_assign(move |layer_surface, event, _| {
@@ -130,12 +149,6 @@ impl Snape {
                     // that it has been configured
                     // The client is also responsible for damage
                     self.draw(&paper, width, height);
-                    self.surface.damage(
-                        0,
-                        0,
-                        self.width as i32,
-                        self.height as i32
-                    );
                     self.surface.commit();
                 }
                 zwlr_layer_surface_v1::Event::Closed => {
@@ -164,11 +177,4 @@ pub fn tile(path: &Path, width: u32, height: u32) -> Surface {
         y += img_height;
     }
     surface
-}
-
-fn image_with_border(path: &Path, width: u32, height: u32, border_size: u32, color: u32) -> Node {
-    let gap = border_size * 2;
-	let mut image = Image::new(path).unwrap();
-    image.resize(width - gap, height - gap);
-    border(image, border_size, Content::Pixel(color))
 }
