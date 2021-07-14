@@ -72,6 +72,7 @@ impl Snape {
         match paper {
             Paper::Color(color) => {
                 let pxcount = buffer.size()/4;
+                self.layer_surface.set_exclusive_zone(-1);
                 let mut writer = BufWriter::new(buffer.get_mut_buf());
                 for _ in 0..pxcount {
                     writer.write_all(&color.to_ne_bytes()).unwrap();
@@ -80,12 +81,13 @@ impl Snape {
             }
             Paper::Image(path) => {
                 let path = Path::new(&path);
-                let mut image = Image::new(path).unwrap();
-                image.resize(self.width as u32, self.height as u32);
+                self.layer_surface.set_exclusive_zone(-1);
+                let image = Image::new_with_size(path, self.width as u32, self.height as u32).unwrap();
                 buffer.composite(&to_surface(&image), 0, 0);
             }
             Paper::Border(path, gap, color) => {
                 let path = Path::new(&path);
+                self.layer_surface.set_exclusive_zone(0);
                 let bg = image_with_border(path, width , height, *gap, *color);
                 buffer.composite(&to_surface(&bg), 0, 0);
             }
@@ -94,6 +96,7 @@ impl Snape {
                 let bg = tile(path, width as u32, height as u32);
                 buffer.composite(&bg, 0, 0);
                 let color = Content::Pixel(*color);
+                self.layer_surface.set_exclusive_zone(0);
                 let border_hor = Surface::new(width, *gap, color).unwrap();
                 let border_ver = Surface::new(*gap, height, color).unwrap();
                 buffer.composite(&border_hor, 0, 0);
@@ -103,6 +106,7 @@ impl Snape {
             }
             Paper::Tiled(path) => {
                 let path = Path::new(&path);
+                self.layer_surface.set_exclusive_zone(-1);
                 let bg = tile(path, width as u32, height as u32);
                 buffer.composite(&bg, 0, 0);
             }
@@ -129,8 +133,8 @@ impl Snape {
                     self.surface.damage(
                         0,
                         0,
-                        width as i32,
-                        height as i32
+                        self.width as i32,
+                        self.height as i32
                     );
                     self.surface.commit();
                 }

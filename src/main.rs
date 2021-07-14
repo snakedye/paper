@@ -48,13 +48,12 @@ fn main() {
                 }
                 "-h" | "--help" => {
                     print!("Usage: paper [option]\n\n");
-                    print!("  -c | --color 		 		#AARRGGBB\n");
-                    print!("  -i | --image 		 		/path/to/image\n");
-                    print!("  -f | --fit 		 		/path/to/image\n");
-                    print!("  -t | --tile 		 		/path/to/image\n");
-                    print!("  -b | --border		 		/path/to/image border_size #AARRGGBB\n");
-                    print!("  -tb | --tiled-bordered 		/path/to/image border_size #AARRGGBB\n");
-                    println!();
+                    print!("  -c | --color 		 	#AARRGGBB\n");
+                    print!("  -i | --image 		 	/path/to/image\n");
+                    print!("  -f | --fit 		 	/path/to/image\n");
+                    print!("  -t | --tile 		 	/path/to/image\n");
+                    print!("  -b | --border		 	/path/to/image border_size #AARRGGBB\n");
+                    println!("  -tb | --tiled-bordered 	/path/to/image border_size #AARRGGBB\n");
                 }
                 _ => break
             }
