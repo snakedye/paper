@@ -8,6 +8,9 @@ A wallpaper daemon for Wayland compositors implementing the layer-shell protocol
 - Tiled wallpapers
 - Bordered wallpapers
 
+## Dependencies
+
+- [snui](https://gitlab.com/snakedye/snui.git)
 
 ## Building
 
