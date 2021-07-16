@@ -115,12 +115,13 @@ impl Snape {
             Style::Directory(path) => {
                 let dir = Path::new(&path);
                 if dir.is_dir() {
+                    self.layer_surface.set_exclusive_zone(-1);
                     match random_image(dir, self.width as u32, self.height as u32) {
                         Ok(image) =>  image.render(&mut buffer, 0, 0),
-                        Err(e) => eprintln!("{:?}", e)
+                        Err(_) => eprintln!("invalid file type")
                     }
                 } else {
-                    eprintln!("invalid path");
+                    eprintln!("\"{}\" is not a directory", path);
                     std::process::exit(1);
                 }
             }
@@ -151,6 +152,7 @@ impl Snape {
         );
     }
     pub fn dispatch_surface(mut self, paper: Paper) {
+        let mut ping = 0;
         self.layer_surface.clone().quick_assign(move |layer_surface, event, _| {
             match event {
                 zwlr_layer_surface_v1::Event::Configure {
@@ -164,8 +166,11 @@ impl Snape {
                     // The client should use commit to notify itself
                     // that it has been configured
                     // The client is also responsible for damage
-                    self.draw(&paper, width, height);
-                    self.surface.commit();
+                    if ping != 1 {
+                        self.draw(&paper, width, height);
+                        self.surface.commit();
+                    }
+                    ping += 1;
                 }
                 zwlr_layer_surface_v1::Event::Closed => {
                     self.destroy();
@@ -188,14 +193,15 @@ fn random_image(dir: &Path, width: u32, height: u32) -> io::Result<Image> {
                 || filename.ends_with(".jpg") {
                     return Ok(Image::new_with_size(Path::new(path.to_str().unwrap()), width, height).unwrap())
                 } else if path.is_dir() {
-                    return random_image(Path::new(filename), width, height)
+                    let dir = format!("{:?}", path);
+                    return random_image(Path::new(dir.trim_matches('"')), width, height)
                 }
             }
         } else {
             return random_image(dir, width, height)
         }
     }
-    Err(io::Error::new(io::ErrorKind::InvalidData, "incorrect path"))
+    Err(io::Error::new(io::ErrorKind::InvalidData, "invalid file type"))
 }
 
 pub fn tile(path: &Path, width: u32, height: u32) -> Surface {
