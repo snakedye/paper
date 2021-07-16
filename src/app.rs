@@ -64,7 +64,7 @@ impl Snape {
         layer_surface: Main<ZwlrLayerSurfaceV1>,
         mempool: AutoMemPool
     ) -> Snape {
-        layer_surface.set_size(width as u32, height as u32);
+        layer_surface.set_size(0, 0);
         surface.commit();
         Snape {
             width,
@@ -142,7 +142,6 @@ impl Snape {
                     height,
                 } => {
                     layer_surface.ack_configure(serial);
-                    layer_surface.set_size(width, height);
                     self.mempool.resize((width * height) as usize).unwrap();
 
                     // The client should use commit to notify itself
