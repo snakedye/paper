@@ -198,7 +198,7 @@ fn random_image(dir: &Path, width: u32, height: u32) -> io::Result<Image> {
                 }
             }
         } else {
-            return random_image(dir, width, height)
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "empty directory"))
         }
     }
     Err(io::Error::new(io::ErrorKind::InvalidData, "invalid file type"))
