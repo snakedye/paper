@@ -25,6 +25,11 @@ fn main() {
                         paper.style(app::Style::Image(path));
                     }
                 }
+                "-d" | "--dir" => {
+                    if let Some(path) = args.next() {
+                        paper.style(app::Style::Directory(path));
+                    }
+                }
                 "-t" | "--tiled" => {
                     if let Some(path) = args.next() {
                         paper.style(app::Style::Tiled(path));
@@ -44,6 +49,7 @@ fn main() {
                     print!("Usage: paper [option]\n\n");
                     print!("  -c | --color 		 	#AARRGGBB\n");
                     print!("  -i | --image 		 	/path/to/image\n");
+                    print!("  -d | --dir 		 	/path/to/directory\n");
                     print!("  -t | --tile 		 	/path/to/image\n");
                     println!("  -b | --border		 	border_size #AARRGGBB\n");
                 }

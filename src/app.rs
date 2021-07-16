@@ -4,6 +4,10 @@ use snui::widgets::*;
 use wayland_client::protocol::{
     wl_surface::WlSurface,
 };
+use std::io;
+use std::fs;
+use rand::thread_rng;
+use rand::seq::IteratorRandom;
 use std::path::Path;
 use wayland_client::Main;
 use smithay_client_toolkit::shm::AutoMemPool;
@@ -45,6 +49,7 @@ pub enum Style {
     Color(u32),
     Tiled(String),
     Image(String),
+    Directory(String),
     None,
 }
 
@@ -99,13 +104,25 @@ impl Snape {
                 let path = Path::new(&path);
                 self.layer_surface.set_exclusive_zone(-1);
                 let image = Image::new_with_size(path, self.width as u32, self.height as u32).unwrap();
-                buffer.composite(&to_surface(&image), 0, 0);
+                image.render(&mut buffer, 0, 0);
             }
             Style::Tiled(path) => {
                 let path = Path::new(&path);
                 self.layer_surface.set_exclusive_zone(-1);
                 let bg = tile(path, self.width as u32, self.height as u32);
                 buffer.composite(&bg, 0, 0);
+            }
+            Style::Directory(path) => {
+                let dir = Path::new(&path);
+                if dir.is_dir() {
+                    match random_image(dir, self.width as u32, self.height as u32) {
+                        Ok(image) =>  image.render(&mut buffer, 0, 0),
+                        Err(e) => eprintln!("{:?}", e)
+                    }
+                } else {
+                    eprintln!("invalid path");
+                    std::process::exit(1);
+                }
             }
             _ => {}
         }
@@ -157,6 +174,28 @@ impl Snape {
             }
         });
     }
+}
+
+fn random_image(dir: &Path, width: u32, height: u32) -> io::Result<Image> {
+    if dir.is_dir() {
+        let mut rng = thread_rng();
+        if let Some(entry) = fs::read_dir(dir)?.choose(&mut rng) {
+            let path = entry?.path();
+            if let Some(filename) = path.file_name() {
+                let filename = filename.to_str().unwrap();
+                if filename.ends_with(".png")
+                || filename.ends_with(".jpeg")
+                || filename.ends_with(".jpg") {
+                    return Ok(Image::new_with_size(Path::new(path.to_str().unwrap()), width, height).unwrap())
+                } else if path.is_dir() {
+                    return random_image(Path::new(filename), width, height)
+                }
+            }
+        } else {
+            return random_image(dir, width, height)
+        }
+    }
+    Err(io::Error::new(io::ErrorKind::InvalidData, "incorrect path"))
 }
 
 pub fn tile(path: &Path, width: u32, height: u32) -> Surface {
