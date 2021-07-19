@@ -118,7 +118,7 @@ impl Snape {
                     self.layer_surface.set_exclusive_zone(-1);
                     match random_image(dir, self.width as u32, self.height as u32) {
                         Ok(image) =>  image.render(&mut buffer, 0, 0),
-                        Err(_) => eprintln!("invalid file type")
+                        Err(e) => eprintln!("{}", e)
                     }
                 } else {
                     eprintln!("\"{}\" is not a directory", path);
@@ -128,7 +128,7 @@ impl Snape {
             _ => {}
         }
         if let Some((gap, color)) = paper.border {
-            self.layer_surface.set_exclusive_zone(0);
+            self.layer_surface.set_exclusive_zone(1);
             let color = Content::Pixel(color);
             let border_hor = Surface::new(width, gap, color).unwrap();
             let border_ver = Surface::new(gap, height, color).unwrap();
