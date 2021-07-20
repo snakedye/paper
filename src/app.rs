@@ -1,4 +1,4 @@
-use snui::snui::*;
+use snui::*;
 use snui::wayland::*;
 use snui::widgets::*;
 use wayland_client::protocol::{
