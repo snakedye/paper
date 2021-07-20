@@ -90,6 +90,7 @@ impl Snape {
             (4 * self.width) as i32,
             &mut self.mempool,
         );
+        self.layer_surface.set_exclusive_zone(-1);
         match &paper.style {
             Style::Color(color) => {
                 let pxcount = buffer.size()/4;
@@ -102,22 +103,19 @@ impl Snape {
             }
             Style::Image(path) => {
                 let path = Path::new(&path);
-                self.layer_surface.set_exclusive_zone(-1);
                 let image = Image::new_with_size(path, self.width as u32, self.height as u32).unwrap();
-                image.render(&mut buffer, 0, 0);
+                image.render(buffer.get_mut_buf(), self.width as usize, 0, 0);
             }
             Style::Tiled(path) => {
                 let path = Path::new(&path);
-                self.layer_surface.set_exclusive_zone(-1);
                 let bg = tile(path, self.width as u32, self.height as u32);
                 buffer.composite(&bg, 0, 0);
             }
             Style::Directory(path) => {
                 let dir = Path::new(&path);
                 if dir.is_dir() {
-                    self.layer_surface.set_exclusive_zone(-1);
                     match random_image(dir, self.width as u32, self.height as u32) {
-                        Ok(image) =>  image.render(&mut buffer, 0, 0),
+                        Ok(image) =>  image.render(buffer.get_mut_buf(), self.width as usize, 0, 0),
                         Err(e) => eprintln!("{}", e)
                     }
                 } else {
@@ -162,10 +160,6 @@ impl Snape {
                 } => {
                     layer_surface.ack_configure(serial);
                     self.mempool.resize((width * height) as usize).unwrap();
-
-                    // The client should use commit to notify itself
-                    // that it has been configured
-                    // The client is also responsible for damage
                     if ping != 1 {
                         self.draw(&paper, width, height);
                         self.surface.commit();
@@ -215,7 +209,7 @@ pub fn tile(path: &Path, width: u32, height: u32) -> Surface {
     while y < height {
         let mut x = 0;
         while x < width {
-            image.as_ref().unwrap().draw(&mut surface, x, y);
+            image.as_ref().unwrap().draw(surface.get_mut_buf(), surface_width, x, y);
             x += img_width;
         }
         y += img_height;
