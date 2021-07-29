@@ -104,7 +104,7 @@ impl Snape {
             Style::Image(path) => {
                 let path = Path::new(&path);
                 let image = Image::new_with_size(path, self.width as u32, self.height as u32).unwrap();
-                image.render(buffer.get_mut_buf(), self.width as usize, 0, 0);
+                image.draw(buffer.get_mut_buf(), self.width as u32, 0, 0);
             }
             Style::Tiled(path) => {
                 let path = Path::new(&path);
@@ -115,7 +115,7 @@ impl Snape {
                 let dir = Path::new(&path);
                 if dir.is_dir() {
                     match random_image(dir, self.width as u32, self.height as u32) {
-                        Ok(image) =>  image.render(buffer.get_mut_buf(), self.width as usize, 0, 0),
+                        Ok(image) =>  image.draw(buffer.get_mut_buf(), self.width as u32, 0, 0),
                         Err(e) => eprintln!("{}", e)
                     }
                 } else {

@@ -76,14 +76,14 @@ fn main() {
                 .get_layer_surface(&surface, Some(&output.wl_output), Layer::Background, String::from("wallpaper"));
             surface.set_buffer_scale(output.scale);
             layer_surface.set_anchor(Anchor::all());
-            let snape = app::Snape::new(
+            let bg = app::Snape::new(
                 output.width,
                 output.height,
                 surface,
                 layer_surface,
                 mempool
             );
-            snape.dispatch_surface(paper.clone());
+            bg.dispatch_surface(paper.clone());
         }
 
         loop {
