@@ -127,13 +127,12 @@ impl Snape {
         }
         if let Some((gap, color)) = paper.border {
             self.layer_surface.set_exclusive_zone(1);
-            let color = Content::Pixel(color);
-            let border_hor = Surface::new(width, gap, color).unwrap();
-            let border_ver = Surface::new(gap, height, color).unwrap();
-            buffer.composite(&border_hor, 0, 0);
-            buffer.composite(&border_hor, 0, height-gap);
-            buffer.composite(&border_ver, 0, 0);
-            buffer.composite(&border_ver, width-gap, 0);
+            let border_hor = Rectangle::new(width, gap, color);
+            let border_ver = Rectangle::new(gap, height, color);
+            border_ver.draw(buffer.get_mut_buf(), width, 0, 0);
+            border_hor.draw(buffer.get_mut_buf(), width, 0, 0);
+            border_hor.draw(buffer.get_mut_buf(), width, 0, height-gap);
+            border_ver.draw(buffer.get_mut_buf(), width, width-gap, 0);
         }
         buffer.attach(&self.surface, 0, 0);
         self.surface.damage(
