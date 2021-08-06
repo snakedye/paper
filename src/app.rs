@@ -107,9 +107,19 @@ impl Snape {
                 image.draw(buffer.get_mut_buf(), self.width as u32, 0, 0);
             }
             Style::Tiled(path) => {
+                let mut y = 0;
                 let path = Path::new(&path);
-                let bg = tile(path, self.width as u32, self.height as u32);
-                buffer.composite(&bg, 0, 0);
+                let image = Image::new(path);
+                let img_width = image.as_ref().unwrap().get_width();
+                let img_height = image.as_ref().unwrap().get_height();
+                while y < height {
+                    let mut x = 0;
+                    while x < width {
+                        image.as_ref().unwrap().draw(buffer.get_mut_buf(), width, x, y);
+                        x += img_width;
+                    }
+                    y += img_height;
+                }
             }
             Style::Directory(path) => {
                 let dir = Path::new(&path);
@@ -195,23 +205,4 @@ fn random_image(dir: &Path, width: u32, height: u32) -> io::Result<Image> {
         }
     }
     Err(io::Error::new(io::ErrorKind::InvalidData, "invalid file type"))
-}
-
-pub fn tile(path: &Path, width: u32, height: u32) -> Surface {
-    let mut y = 0;
-    let image = Image::new(path);
-    let img_width = image.as_ref().unwrap().get_width();
-    let img_height = image.as_ref().unwrap().get_height();
-    let surface_width = img_width * (width as f64/img_width as f64).ceil() as u32;
-    let surface_height = img_height * (height as f64/img_height as f64).ceil() as u32;
-    let mut surface = Surface::empty(surface_width, surface_height);
-    while y < height {
-        let mut x = 0;
-        while x < width {
-            image.as_ref().unwrap().draw(surface.get_mut_buf(), surface_width, x, y);
-            x += img_width;
-        }
-        y += img_height;
-    }
-    surface
 }
