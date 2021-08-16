@@ -120,26 +120,26 @@ impl Environment {
                                             let mut mempool = AutoMemPool::new(attached.clone()).unwrap();
                                             layer_surface.quick_assign(move |layer_surface, event, _| match event {
                                                 zwlr_layer_surface_v1::Event::Configure{serial, width, height} => {
-                                                    mempool.resize((width * height) as usize * 4).unwrap();
-                                                    layer_surface.set_size(width, height);
-                                                    layer_surface.ack_configure(serial);
+                                                    if mempool.resize((width * height) as usize * 4).is_ok() {
+                                                        layer_surface.ack_configure(serial);
 
-                                                    let mut buffer = Buffer::new(
-                                                        width as i32,
-                                                        height as i32,
-                                                        (4 * width) as i32,
-                                                        &mut mempool,
-                                                    );
+                                                        let mut buffer = Buffer::new(
+                                                            width as i32,
+                                                            height as i32,
+                                                            (4 * width) as i32,
+                                                            &mut mempool,
+                                                        );
 
-    												app::draw(&mut buffer, &paper, width, height);
-                                                    buffer.attach(&surface, 0, 0);
-                                                    surface.damage(
-                                                        0,
-                                                        0,
-                                                        1 << 30,
-                                                        1 << 30
-                                                    );
-                                                    surface.commit();
+        												app::draw(&mut buffer, &paper, width, height);
+                                                        buffer.attach(&surface, 0, 0);
+                                                        surface.damage(
+                                                            0,
+                                                            0,
+                                                            1 << 30,
+                                                            1 << 30
+                                                        );
+                                                        surface.commit();
+                                                    }
                                                 }
                                                 _ => {
                                                     layer_surface.destroy();
