@@ -1,3 +1,5 @@
+use super::app;
+use snui::wayland::Buffer;
 use wayland_client::protocol::{
     wl_compositor::WlCompositor,
     wl_output::{Event, WlOutput},
@@ -5,35 +7,16 @@ use wayland_client::protocol::{
     wl_shm::WlShm,
     wl_surface::WlSurface,
 };
+use wayland_protocols::wlr::unstable::layer_shell::v1::client::{
+    zwlr_layer_surface_v1,
+};
+use smithay_client_toolkit::shm::AutoMemPool;
 use wayland_client::{Display, EventQueue, GlobalManager, Main};
 use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_shell_v1::ZwlrLayerShellV1;
-
-#[derive(Debug)]
-pub struct Output {
-    pub wl_output: Main<WlOutput>,
-    pub name: String,
-    pub scale: i32,
-    pub width: i32,
-    pub height: i32,
-    configured: bool,
-}
-
-impl Output {
-    fn new(wl_output: Main<WlOutput>) -> Output {
-        Output {
-            wl_output,
-            name: String::new(),
-            scale: 1,
-            height: 0,
-            width: 0,
-            configured: false,
-        }
-    }
-}
+use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_shell_v1::Layer;
 
 #[derive(Debug)]
 pub struct Environment {
-    pub outputs: Vec<Output>,
     pub seats: Vec<Main<WlSeat>>,
     pub shm: Option<Main<WlShm>>,
     pub compositor: Option<Main<WlCompositor>>,
@@ -41,14 +24,13 @@ pub struct Environment {
 }
 
 impl Environment {
-    pub fn new(display: &Display, event_queue: &mut EventQueue) -> Environment {
+    pub fn new(display: &Display, event_queue: &mut EventQueue, paper: app::Paper) -> Environment {
         let attached_display = (*display).clone().attach(event_queue.token());
-        let mut environment = Environment {
+        let environment = Environment {
             compositor: None,
             layer_shell: None,
             shm: None,
             seats: Vec::new(),
-            outputs: Vec::new(),
         };
 
         GlobalManager::new_with_cb(
@@ -91,66 +73,91 @@ impl Environment {
                 [
                     WlOutput,
                     3,
-                    |output: Main<WlOutput>, mut environment: DispatchData| {
-                        let mut clock = 0;
-                        output.quick_assign(move |wl_output, event, mut output_handle| {
-                            let output_handle = output_handle.get::<Vec<Output>>().unwrap();
-                            for output in output_handle {
-                                if !output.configured {
-                                    match &event {
-                                        Event::Geometry {
-                                            x: _,
-                                            y: _,
-                                            physical_width: _,
-                                            physical_height: _,
-                                            subpixel: _,
-                                            make,
-                                            model: _,
-                                            transform: _,
-                                        } => {
-                                            output.name = make.to_string();
+                    move |output: Main<WlOutput>, mut environment: DispatchData| {
+                        if let Some(env) = environment.get::<Environment>() {
+                            let surface = env.get_surface();
+                            if env.layer_shell.is_some() && env.compositor.is_some() && env.shm.is_some() {
+                                let mut draw = true;
+                                let paper = paper.clone();
+                                let layer_surface = env
+                                    .layer_shell
+                                    .as_ref()
+                                    .expect("Compositor doesn't implement the LayerShell protocol")
+                                    .get_layer_surface(&surface, Some(&output), Layer::Background, String::from("wallpaper"));
+                                let attached = Attached::from(env.shm.clone().expect("No shared memory pool"));
+                                output.quick_assign(move |_, event, _| match event {
+                                    Event::Geometry {
+                                        x: _,
+                                        y: _,
+                                        physical_width: _,
+                                        physical_height: _,
+                                        subpixel: _,
+                                        make,
+                                        model: _,
+                                        transform: _,
+                                    } => {
+                                        if let Some(name) = &paper.output {
+                                            println!("{} / {}", name, make);
+                                            draw = name.contains(&make);
                                         }
-                                        Event::Mode {
-                                            flags: _,
-                                            width,
-                                            height,
-                                            refresh: _,
-                                        } => {
-                                            output.width = *width;
-                                            output.height = *height;
-                                        }
-                                        Event::Scale { factor } => {
-                                            output.scale = *factor;
-                                        }
-                                        _ => {}
                                     }
-                                    if clock == 3 {
-                                        output.configured = true;
-                                        output.wl_output = wl_output.clone();
+                                    Event::Mode {
+                                        flags: _,
+                                        width,
+                                        height,
+                                        refresh: _,
+                                    } => {
+                                        if draw {
+                                            let paper = paper.clone();
+                                            let surface = surface.clone();
+                                            layer_surface.set_size(width as u32, height as u32);
+                                            if paper.border.is_some() {
+                                                layer_surface.set_exclusive_zone(1);
+                                            } else {
+                                                layer_surface.set_exclusive_zone(-1);
+                                            }
+                                            surface.commit();
+                                            let mut mempool = AutoMemPool::new(attached.clone()).unwrap();
+                                            layer_surface.quick_assign(move |layer_surface, event, _| match event {
+                                                zwlr_layer_surface_v1::Event::Configure{serial, width, height} => {
+                                                    mempool.resize((width * height) as usize * 4).unwrap();
+                                                    layer_surface.set_size(width, height);
+                                                    layer_surface.ack_configure(serial);
+
+                                                    let mut buffer = Buffer::new(
+                                                        width as i32,
+                                                        height as i32,
+                                                        (4 * width) as i32,
+                                                        &mut mempool,
+                                                    );
+
+    												app::draw(&mut buffer, &paper, width, height);
+                                                    buffer.attach(&surface, 0, 0);
+                                                    surface.damage(
+                                                        0,
+                                                        0,
+                                                        1 << 30,
+                                                        1 << 30
+                                                    );
+                                                    surface.commit();
+                                                }
+                                                _ => {
+                                                    layer_surface.destroy();
+                                                }
+                                            });
+                                        }
                                     }
-                                    clock += 1;
-                                } else {
-                                    break;
-                                }
+                                    Event::Scale { factor } => {
+                                        surface.set_buffer_scale(factor);
+                                    }
+                                    _ => {}
+                                });
                             }
-                        });
-                        environment
-                            .get::<Environment>()
-                            .unwrap()
-                            .outputs
-                            .push(Output::new(output));
+                        }
                     }
                 ]
             ),
         );
-        event_queue
-            .sync_roundtrip(&mut environment, |_, _, _| unreachable!())
-            .unwrap();
-
-        event_queue
-            .sync_roundtrip(&mut environment.outputs, |_, _, _| unreachable!())
-            .unwrap();
-
         environment
     }
     pub fn get_surface(&self) -> Main<WlSurface> {
