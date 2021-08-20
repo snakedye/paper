@@ -10,6 +10,7 @@ use wayland_client::protocol::{
 use wayland_protocols::wlr::unstable::layer_shell::v1::client::{
     zwlr_layer_surface_v1,
 };
+use std::{thread, time};
 use smithay_client_toolkit::shm::AutoMemPool;
 use wayland_client::{Display, EventQueue, GlobalManager, Main};
 use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_shell_v1::ZwlrLayerShellV1;
@@ -118,9 +119,12 @@ impl Environment {
                                             }
                                             surface.commit();
                                             let mut mempool = AutoMemPool::new(attached.clone()).unwrap();
+                                            let mut timer: Option<time::Instant> = None;
                                             layer_surface.quick_assign(move |layer_surface, event, _| match event {
                                                 zwlr_layer_surface_v1::Event::Configure{serial, width, height} => {
-                                                    if mempool.resize((width * height) as usize * 4).is_ok() {
+                                                    if (timer.is_none() || timer.as_ref().unwrap().elapsed() > time::Duration::from_millis(200))
+                                                    && mempool.resize((width * height) as usize * 4).is_ok() {
+                                                        timer = Some(time::Instant::now());
                                                         layer_surface.ack_configure(serial);
 
                                                         let mut buffer = Buffer::new(
