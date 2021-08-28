@@ -98,7 +98,6 @@ impl Environment {
                                         transform: _,
                                     } => {
                                         if let Some(name) = &paper.output {
-                                            println!("{} / {}", name, make);
                                             draw = name.contains(&make);
                                         }
                                     }
