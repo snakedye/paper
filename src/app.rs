@@ -6,9 +6,8 @@ use rand::thread_rng;
 use snui::wayland::*;
 use snui::widgets::*;
 use rand::seq::IteratorRandom;
-use std::io::{Write, BufWriter};
+use std::io::Write;
 
-#[derive(Clone, Debug)]
 pub struct Paper {
     style: Style,
     pub border: Option<(u32, u32)>,
@@ -37,40 +36,35 @@ impl Paper {
    }
 }
 
-#[derive(Clone, Debug)]
 pub enum Style {
     Color(u32),
-    Tiled(String),
-    Image(String),
+    Tiled(Result<Image, Box<dyn std::error::Error>>),
+    Image(Result<Image, Box<dyn std::error::Error>>),
     Directory(String),
     None,
 }
 
-pub fn draw(buffer: &mut Buffer, paper: &Paper,  width: u32, height: u32) {
-    match &paper.style {
+pub fn draw(buf: &mut Buffer, paper: &mut Paper,  width: u32, height: u32) {
+    match &mut paper.style {
         Style::Color(color) => {
-            let pxcount = buffer.size()/4;
-            let mut writer = BufWriter::new(buffer.get_mut_buf());
+            let pxcount = buf.get_width() * buf.get_height();
+            let mut writer = &mut buf.canvas[0..];
             for _ in 0..pxcount {
                 writer.write_all(&color.to_ne_bytes()).unwrap();
             }
             writer.flush().unwrap();
         }
-        Style::Image(path) => {
-            let path = Path::new(&path);
-            let image = Image::new_with_size(path, width as u32, height as u32).unwrap();
-            image.draw(buffer.get_mut_buf(), width as u32, 0, 0);
+        Style::Image(image) => if let Ok(image) = image.as_mut() {
+            image.resize(width as u32, height as u32).draw(&mut buf.canvas, 0, 0);
         }
-        Style::Tiled(path) => {
+        Style::Tiled(image) => if let Ok(image) = image.as_mut() {
             let mut y = 0;
-            let path = Path::new(&path);
-            let image = Image::new(path);
-            let img_width = image.as_ref().unwrap().get_width();
-            let img_height = image.as_ref().unwrap().get_height();
+            let img_width = image.get_width();
+            let img_height = image.get_height();
             while y < height {
                 let mut x = 0;
                 while x < width {
-                    image.as_ref().unwrap().draw(buffer.get_mut_buf(), width, x, y);
+                    image.draw(&mut buf.canvas, x, y);
                     x += img_width;
                 }
                 y += img_height;
@@ -80,7 +74,7 @@ pub fn draw(buffer: &mut Buffer, paper: &Paper,  width: u32, height: u32) {
             let dir = Path::new(&path);
             if dir.is_dir() {
                 match random_image(dir, width as u32, height as u32) {
-                    Ok(image) =>  image.draw(buffer.get_mut_buf(), width as u32, 0, 0),
+                    Ok(image) =>  image.draw(&mut buf.canvas, 0, 0),
                     Err(e) => eprintln!("{}", e)
                 }
             } else {
@@ -93,10 +87,10 @@ pub fn draw(buffer: &mut Buffer, paper: &Paper,  width: u32, height: u32) {
     if let Some((gap, color)) = paper.border {
         let border_hor = Rectangle::new(width, gap, color);
         let border_ver = Rectangle::new(gap, height, color);
-        border_ver.draw(buffer.get_mut_buf(), width, 0, 0);
-        border_hor.draw(buffer.get_mut_buf(), width, 0, 0);
-        border_hor.draw(buffer.get_mut_buf(), width, 0, height-gap);
-        border_ver.draw(buffer.get_mut_buf(), width, width-gap, 0);
+        border_ver.draw(&mut buf.canvas, 0, 0);
+        border_hor.draw(&mut buf.canvas, 0, 0);
+        border_hor.draw(&mut buf.canvas, 0, height-gap);
+        border_ver.draw(&mut buf.canvas, width-gap, 0);
     }
 }
 

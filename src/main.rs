@@ -1,5 +1,7 @@
 mod app;
 mod environment;
+use std::path::Path;
+use snui::widgets::*;
 use environment::Environment;
 use wayland_client::{Display};
 
@@ -19,7 +21,7 @@ fn main() {
                 }
                 "-i" | "--image" => {
                     if let Some(path) = args.next() {
-                        paper.style(app::Style::Image(path));
+                        paper.style(app::Style::Image(Image::new(Path::new(&path))));
                     }
                 }
                 "-d" | "--dir" => {
@@ -30,7 +32,7 @@ fn main() {
                 "-o" | "--output" =>  paper.output = args.next(),
                 "-t" | "--tiled" => {
                     if let Some(path) = args.next() {
-                        paper.style(app::Style::Tiled(path));
+                        paper.style(app::Style::Tiled(Image::new(Path::new(&path))));
                     }
                 }
                 "-b" | "--border" => {
