@@ -44,8 +44,9 @@ pub enum Style {
     None,
 }
 
-pub fn draw(buf: &mut Buffer, paper: &mut Paper,  width: u32, height: u32) {
-    match &mut paper.style {
+pub fn draw(buf: &mut Buffer, paper: &Paper,  width: u32, height: u32) {
+    let scale = buf.get_width()/width;
+    match &paper.style {
         Style::Color(color) => {
             let pxcount = buf.get_width() * buf.get_height();
             let mut writer = &mut buf.canvas[0..];
@@ -54,10 +55,16 @@ pub fn draw(buf: &mut Buffer, paper: &mut Paper,  width: u32, height: u32) {
             }
             writer.flush().unwrap();
         }
-        Style::Image(image) => if let Ok(image) = image.as_mut() {
-            image.resize(width as u32, height as u32).draw(&mut buf.canvas, 0, 0);
+        Style::Image(image) => if let Ok(image) = image.as_ref() {
+            let dx = width/scale + width/(scale * scale);
+            let dy = height/scale + height/(scale * scale);
+            image.resize(width as u32 / scale, height as u32 / scale).draw(
+                &mut buf.canvas,
+                if scale > 1 { dx } else { 0 },
+                if scale > 1 { dy } else { 0 },
+            );
         }
-        Style::Tiled(image) => if let Ok(image) = image.as_mut() {
+        Style::Tiled(image) => if let Ok(image) = image.as_ref() {
             let mut y = 0;
             let img_width = image.get_width();
             let img_height = image.get_height();

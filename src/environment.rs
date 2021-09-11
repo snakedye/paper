@@ -80,6 +80,8 @@ impl Environment {
                             let surface = env.get_surface();
                             if env.layer_shell.is_some() && env.compositor.is_some() && env.shm.is_some() {
                                 let mut draw = true;
+                                let mut size = (0, 0);
+                                let mut scale = 1;
                                 let layer_surface = env
                                     .layer_shell
                                     .as_ref()
@@ -107,9 +109,16 @@ impl Environment {
                                         height,
                                         refresh: _,
                                     } => {
+                                        size = (width, height);
+                                    }
+                                    Event::Scale { factor } => {
+                                        scale = factor.abs() as u32;
+                                        surface.set_buffer_scale(factor);
+                                    }
+                                    Event::Done => {
                                         if draw {
                                             let surface = surface.clone();
-                                            layer_surface.set_size(width as u32, height as u32);
+                                            layer_surface.set_size(size.0 as u32 * scale, size.1 as u32 * scale);
                                             if let Some(env) = env.get::<Environment>() {
                                                 if env.paper.border.is_some() {
                                                     layer_surface.set_exclusive_zone(1);
@@ -122,19 +131,20 @@ impl Environment {
                                             let mut timer: Option<time::Instant> = None;
                                             layer_surface.quick_assign(move |layer_surface, event, mut env| match event {
                                                 zwlr_layer_surface_v1::Event::Configure{serial, width, height} => {
-                                                    if timer.is_none() || timer.as_ref().unwrap().elapsed() > time::Duration::from_millis(300) {
+                                                    if timer.is_none() || timer.as_ref().unwrap().elapsed() > time::Duration::from_millis(600) {
                                                         timer = Some(time::Instant::now());
                                                         layer_surface.ack_configure(serial);
+                                                        layer_surface.set_size(width, height);
 
 														if let Some(mut pool) = mempool.pool() {
     														if pool.resize((width * height) as usize * 4).is_ok() {
                                                                 if let Ok(mut buf) = Buffer::new(
-                                                                    width,
-                                                                    height,
+                                                                    width * scale,
+                                                                    height * scale,
                                                                     &mut pool,
                                                                 ) {
                                                                     if let Some(env) = env.get::<Environment>() {
-                        												app::draw(&mut buf, &mut env.paper, width, height);
+                        												app::draw(&mut buf, &env.paper, width, height);
                                                                         buf.attach(&surface, 0, 0);
                                                                         surface.damage(
                                                                             0,
@@ -154,9 +164,6 @@ impl Environment {
                                                 }
                                             });
                                         }
-                                    }
-                                    Event::Scale { factor } => {
-                                        surface.set_buffer_scale(factor);
                                     }
                                     _ => {}
                                 });
