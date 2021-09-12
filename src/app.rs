@@ -56,8 +56,8 @@ pub fn draw(buf: &mut Buffer, paper: &Paper,  width: u32, height: u32) {
             writer.flush().unwrap();
         }
         Style::Image(image) => if let Ok(image) = image.as_ref() {
-            let dx = width/scale + width/(scale * scale);
-            let dy = height/scale + height/(scale * scale);
+            let dx = width/scale + width/(scale * 2);
+            let dy = height/scale + height/(scale * 2);
             image.resize(width as u32 / scale, height as u32 / scale).draw(
                 &mut buf.canvas,
                 if scale > 1 { dx } else { 0 },
